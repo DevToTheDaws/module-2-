@@ -1,0 +1,135 @@
+  Dim ws As Worksheet
+    Dim LastRow As Long
+    Dim Ticker As String
+    Dim OpenPrice As Double
+    Dim ClosePrice As Double
+    Dim YearlyChange As Double
+    Dim PercentChange As Double
+    Dim TotalVolume As Double
+    Dim SummaryRow As Long
+    Dim SummaryRange As Range
+    Dim MaxPercentIncrease As Double
+    Dim MaxPercentDecrease As Double
+    Dim MaxVolume As Double
+    Dim TickerMaxPercentIncrease As String
+    Dim TickerMaxPercentDecrease As String
+    Dim TickerMaxVolume As String
+
+    ' Find Last Row
+    Set ws = ThisWorkbook.Sheets("2020")
+    LastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+
+    SummaryRow = 2 ' Create a new table with summary data, starting from Row 2 so headers are ignored
+
+    ' Write column headers for the new columns
+    ws.Cells(1, 9).Value = "Ticker"
+    ws.Cells(1, 10).Value = "Yearly Change"
+    ws.Cells(1, 11).Value = "Percentage Change"
+    ws.Cells(1, 12).Value = "Total Stock Volumes"
+
+    ' Give the summary range for applying conditional formatting
+    Set SummaryRange = ws.Range("J2:K" & LastRow)
+    For i = 2 To LastRow
+        If ws.Cells(i + 1, 1).Value <> ws.Cells(i, 1).Value Then
+            ' If the next row's ticker symbol is different, then it's the last entry for this ticker symbol
+            Ticker = ws.Cells(i, 1).Value
+            ClosePrice = ws.Cells(i, 6).Value
+            YearlyChange = ClosePrice - OpenPrice
+            If OpenPrice <> 0 Then
+                PercentChange = YearlyChange / OpenPrice
+            Else
+                PercentChange = 0
+            End If
+            TotalVolume = TotalVolume + ws.Cells(i, 7).Value
+
+            ' Write the data in the new columns
+            ws.Cells(SummaryRow, 9).Value = Ticker
+            ws.Cells(SummaryRow, 10).Value = YearlyChange
+            ' Write Percentage Change as a Percentage
+            ws.Cells(SummaryRow, 11).Value = Format(PercentChange, "0.00%")
+            ws.Cells(SummaryRow, 12).Value = TotalVolume
+
+            ' Apply colours for Yearly Change
+            If YearlyChange > 0 Then
+                ws.Cells(SummaryRow, 10).Interior.Color = RGB(0, 255, 0) ' Green
+            ElseIf YearlyChange < 0 Then
+                ws.Cells(SummaryRow, 10).Interior.Color = RGB(255, 0, 0) ' Red
+            Else
+                ws.Cells(SummaryRow, 10).Interior.Color = RGB(255, 255, 0) ' Yellow
+            End If
+
+            ' Apply colours for Percentage Change
+            If PercentChange > 0 Then
+                ws.Cells(SummaryRow, 11).Interior.Color = RGB(0, 255, 0) ' Green
+            ElseIf PercentChange < 0 Then
+                ws.Cells(SummaryRow, 11).Interior.Color = RGB(255, 0, 0) ' Red
+            Else
+                ws.Cells(SummaryRow, 11).Interior.Color = RGB(255, 255, 0) ' Yellow
+            End If
+
+            ' Move to the next row for summary
+            SummaryRow = SummaryRow + 1
+
+            ' Reset variables for the next ticker symbol
+            OpenPrice = 0
+            ClosePrice = 0
+            YearlyChange = 0
+            PercentChange = 0
+            TotalVolume = 0
+        Else
+            If OpenPrice = 0 Then
+                OpenPrice = ws.Cells(i, 3).Value
+            End If
+            TotalVolume = TotalVolume + ws.Cells(i, 7).Value
+        End If
+    Next i
+
+    ' Create Summary Table for which ticker is the biggest gainer, loser and largest stock volume
+    Set ws = ThisWorkbook.Sheets("2020")
+    
+    LastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    
+    'Set the lowest value that the maximum % can be - it could be very low (highly unlikely) - i.e. the opposite of what is expected but it covers all eventualities.
+    MaxPercentIncrease = -99999
+    'Set the highest value that the minimum % can be - it could be very high (again highly unlikely)- i.e. the opposite of what is expected but it covers all eventualities.
+    MinPercentDecrease = 99999
+    'Set the lowest value for the Total Stock Volume - it could be very low (highly unlikely) - i.e. the opposite of what is expected but it covers all eventualities.
+    MaxVolume = -99999
+
+    For i = 2 To LastRow
+        PercentChange = ws.Cells(i, 11).Value
+         ' Check for highest % change
+         If PercentChange > MaxPercentIncrease Then
+            MaxPercentIncrease = PercentChange
+            TickerMaxPercentIncrease = ws.Cells(i, 9).Value
+        End If
+
+        ' Check for lowest % change
+        If PercentChange < MinPercentDecrease Then
+            MinPercentDecrease = PercentChange
+            TickerMinPercentDecrease = ws.Cells(i, 9).Value
+        End If
+
+        ' Check for the highest Total Stock Volume
+        If ws.Cells(i, 12).Value > MaxVolume Then
+            MaxVolume = ws.Cells(i, 12).Value
+            TickerMaxVolume = ws.Cells(i, 9).Value
+        End If
+    Next i
+
+    ' Create the final table
+    ws.Cells(1, 16).Value = "Ticker"
+    ws.Cells(1, 17).Value = "Value"
+
+    ws.Cells(2, 15).Value = "Highest % Change"
+    ws.Cells(2, 16).Value = TickerMaxPercentIncrease
+    ws.Cells(2, 17).Value = Format(MaxPercentIncrease, "0.00%")
+
+    ws.Cells(3, 15).Value = "Lowest % Change"
+    ws.Cells(3, 16).Value = TickerMinPercentDecrease
+    ws.Cells(3, 17).Value = Format(MinPercentDecrease, "0.00%")
+
+    ws.Cells(4, 15).Value = "Highest Volume"
+    ws.Cells(4, 16).Value = TickerMaxVolume
+    ws.Cells(4, 17).Value = MaxVolume
+end sub
